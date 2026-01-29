@@ -1,0 +1,33 @@
+import { Router } from 'express';
+import * as agentController from '../controllers/agent.controller';
+import { authenticate } from '../auth/middleware/auth.middleware';
+
+const router = Router();
+
+/**
+ * Agent Routes
+ * All agent-specific endpoints (protected, agent role required)
+ */
+
+// All routes require authentication
+router.use(authenticate);
+
+// Get pending tickets
+router.get('/tickets/pending', agentController.getPendingTickets);
+
+// Get assigned tickets
+router.get('/tickets/assigned', agentController.getAssignedTickets);
+
+// Accept a ticket
+router.post('/tickets/:id/accept', agentController.acceptTicket);
+
+// Resolve a ticket
+router.post('/tickets/:id/resolve', agentController.resolveTicket);
+
+// Update agent status
+router.put('/status', agentController.updateAgentStatus);
+
+// Get agent statistics
+router.get('/stats', agentController.getAgentStats);
+
+export default router;

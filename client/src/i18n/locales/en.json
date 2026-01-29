@@ -1,0 +1,38 @@
+{
+  "chatbot": {
+    "header": {
+      "title": "PPC Assistant",
+      "subtitle": "How can I help?",
+      "back": "Back to menu"
+    },
+    "welcome": {
+      "greeting": "Hi! I'm your PPC Assistant",
+      "description": "I can help with RTI applications, complaints, and more."
+    },
+    "initialMessage": "Hello! Welcome to Public Participation Center. I'm your PPC Civic Assistant. I can help with RTI applications, complaints, legal aid, emergency assistance, healthcare services, and finding nearest PPC centers.",
+    "actions": {
+      "track": "Track Status",
+      "report": "Report Issue",
+      "find": "Find Center",
+      "emergency": "Emergency Help"
+    },
+    "prompts": {
+      "track": "I want to track my application status",
+      "report": "I need to file a report or complaint",
+      "find": "Help me find the nearest service center",
+      "emergency": "I need emergency assistance"
+    },
+    "footer": {
+      "help": "Help",
+      "services": "All Services"
+    },
+    "input": {
+      "placeholder": "Type your message...",
+      "send": "Send"
+    },
+    "rateLimit": {
+      "message": "Please wait before sending more messages",
+      "wait": "Please wait {{seconds}} seconds before sending more messages."
+    }
+  }
+}
