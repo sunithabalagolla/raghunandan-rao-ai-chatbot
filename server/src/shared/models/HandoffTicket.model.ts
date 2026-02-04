@@ -7,12 +7,19 @@ import { IMessage } from './Conversation.model';
  */
 export interface IHandoffTicket extends Document {
   userId: mongoose.Types.ObjectId;
+  sessionUserId: string; // Session-based user ID for matching chat messages
   conversationId: mongoose.Types.ObjectId;
   status: 'waiting' | 'assigned' | 'resolved' | 'cancelled';
   priority: number;
   reason: string;
   customerLanguage?: 'en' | 'hi' | 'te';
   conversationContext: IMessage[];
+  location?: {
+    district: string;
+    assembly: string;
+    mandal: string;
+    village: string;
+  };
   createdAt: Date;
   assignedAgentId?: mongoose.Types.ObjectId;
   assignedAt?: Date;
@@ -51,6 +58,12 @@ const HandoffTicketSchema = new Schema<IHandoffTicket>(
       ref: 'User',
       required: [true, 'User ID is required'],
       index: true,
+    },
+    sessionUserId: {
+      type: String,
+      required: [true, 'Session User ID is required'],
+      index: true,
+      trim: true,
     },
     conversationId: {
       type: Schema.Types.ObjectId,
@@ -101,6 +114,28 @@ const HandoffTicketSchema = new Schema<IHandoffTicket>(
         },
       }],
       default: [],
+    },
+    location: {
+      district: {
+        type: String,
+        trim: true,
+        maxlength: [100, 'District name cannot exceed 100 characters'],
+      },
+      assembly: {
+        type: String,
+        trim: true,
+        maxlength: [100, 'Assembly name cannot exceed 100 characters'],
+      },
+      mandal: {
+        type: String,
+        trim: true,
+        maxlength: [100, 'Mandal name cannot exceed 100 characters'],
+      },
+      village: {
+        type: String,
+        trim: true,
+        maxlength: [100, 'Village name cannot exceed 100 characters'],
+      },
     },
     assignedAgentId: {
       type: Schema.Types.ObjectId,
@@ -210,6 +245,12 @@ HandoffTicketSchema.index({ priorityLevel: 1, status: 1 });
 HandoffTicketSchema.index({ status: 1, priorityLevel: 1, createdAt: 1 });
 HandoffTicketSchema.index({ 'slaData.isOverdue': 1, status: 1 });
 HandoffTicketSchema.index({ 'autoAssignmentData.assignmentMethod': 1 });
+
+// Location-based indexes for constituency management
+HandoffTicketSchema.index({ 'location.district': 1, status: 1 });
+HandoffTicketSchema.index({ 'location.assembly': 1, status: 1 });
+HandoffTicketSchema.index({ 'location.mandal': 1, status: 1 });
+HandoffTicketSchema.index({ 'location.village': 1, status: 1 });
 
 const HandoffTicket = mongoose.model<IHandoffTicket>('HandoffTicket', HandoffTicketSchema);
 

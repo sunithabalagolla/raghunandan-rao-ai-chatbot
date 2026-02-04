@@ -90,9 +90,41 @@ export const AgentStats: React.FC<AgentStatsProps> = ({ className = '' }) => {
     );
   }
 
-  if (!performanceData) return null;
+  if (!performanceData) {
+    return (
+      <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${className}`}>
+        <div className="text-center">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-64 mb-6 mx-auto"></div>
+            <div className="text-gray-500">Loading performance data...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const { current, historical, teamAverage, suggestions } = performanceData;
+
+  // Add null safety checks for all required data
+  if (!current || !historical || !teamAverage || !suggestions) {
+    return (
+      <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${className}`}>
+        <div className="text-center">
+          <svg className="mx-auto h-12 w-12 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Incomplete Performance Data</h3>
+          <p className="mt-1 text-sm text-gray-500">Some performance metrics are not available</p>
+          <button
+            onClick={loadPerformanceData}
+            className="mt-4 inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Reload Data
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -138,37 +170,37 @@ export const AgentStats: React.FC<AgentStatsProps> = ({ className = '' }) => {
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="text-center">
-            <div className="text-3xl font-bold text-gray-900">{current.chatsHandled}</div>
+            <div className="text-3xl font-bold text-gray-900">{current?.chatsHandled || 0}</div>
             <div className="text-sm text-gray-600">Chats Handled</div>
             <div className="text-xs text-gray-500 mt-1">
-              Team avg: {teamAverage.chatsHandled}
+              Team avg: {teamAverage?.chatsHandled || 0}
             </div>
           </div>
           <div className="text-center">
-            <div className={`text-3xl font-bold ${getPerformanceColor(current.averageResponseTime, { good: 120, warning: 180 })}`}>
-              {current.averageResponseTime}s
+            <div className={`text-3xl font-bold ${getPerformanceColor(current?.averageResponseTime || 0, { good: 120, warning: 180 })}`}>
+              {current?.averageResponseTime || 0}s
             </div>
             <div className="text-sm text-gray-600">Avg Response Time</div>
             <div className="text-xs text-gray-500 mt-1">
-              Team avg: {teamAverage.averageResponseTime}s
+              Team avg: {teamAverage?.averageResponseTime || 0}s
             </div>
           </div>
           <div className="text-center">
-            <div className={`text-3xl font-bold ${getPerformanceColor(current.resolutionRate, { good: 85, warning: 70 })}`}>
-              {current.resolutionRate}%
+            <div className={`text-3xl font-bold ${getPerformanceColor(current?.resolutionRate || 0, { good: 85, warning: 70 })}`}>
+              {current?.resolutionRate || 0}%
             </div>
             <div className="text-sm text-gray-600">Resolution Rate</div>
             <div className="text-xs text-gray-500 mt-1">
-              Team avg: {teamAverage.resolutionRate}%
+              Team avg: {teamAverage?.resolutionRate || 0}%
             </div>
           </div>
           <div className="text-center">
-            <div className={`text-3xl font-bold ${getPerformanceColor(current.customerSatisfaction, { good: 4.0, warning: 3.5 })}`}>
-              {current.customerSatisfaction.toFixed(1)}
+            <div className={`text-3xl font-bold ${getPerformanceColor(current?.customerSatisfaction || 0, { good: 4.0, warning: 3.5 })}`}>
+              {(current?.customerSatisfaction || 0).toFixed(1)}
             </div>
             <div className="text-sm text-gray-600">Customer Rating</div>
             <div className="text-xs text-gray-500 mt-1">
-              Team avg: {teamAverage.customerSatisfaction.toFixed(1)}
+              Team avg: {(teamAverage?.customerSatisfaction || 0).toFixed(1)}
             </div>
           </div>
         </div>
@@ -179,15 +211,15 @@ export const AgentStats: React.FC<AgentStatsProps> = ({ className = '' }) => {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Current Session</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">{current.activeTime}</div>
+            <div className="text-2xl font-bold text-blue-600">{current?.activeTime || '0h 0m'}</div>
             <div className="text-sm text-blue-700">Active Time</div>
           </div>
           <div className="text-center p-4 bg-green-50 rounded-lg">
-            <div className="text-2xl font-bold text-green-600">{current.currentChats}</div>
+            <div className="text-2xl font-bold text-green-600">{current?.currentChats || 0}</div>
             <div className="text-sm text-green-700">Active Chats</div>
           </div>
           <div className="text-center p-4 bg-purple-50 rounded-lg">
-            <div className="text-2xl font-bold text-purple-600">{current.templatesUsed}</div>
+            <div className="text-2xl font-bold text-purple-600">{current?.templatesUsed || 0}</div>
             <div className="text-sm text-purple-700">Templates Used</div>
           </div>
         </div>
@@ -197,17 +229,17 @@ export const AgentStats: React.FC<AgentStatsProps> = ({ className = '' }) => {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Historical Performance</h2>
         <div className="space-y-4">
-          {historical.map((day, index) => (
+          {(historical || []).map((day, index) => (
             <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div className="flex items-center space-x-4">
-                <div className="text-sm font-medium text-gray-900">{day.date}</div>
-                <div className="text-sm text-gray-600">{day.chatsHandled} chats</div>
+                <div className="text-sm font-medium text-gray-900">{day?.date || 'Unknown'}</div>
+                <div className="text-sm text-gray-600">{day?.chatsHandled || 0} chats</div>
               </div>
               <div className="flex items-center space-x-4">
-                <div className="text-sm text-gray-600">{day.averageResponseTime}s avg</div>
-                <div className="text-sm text-gray-600">{day.resolutionRate}% resolved</div>
-                <div className={`text-sm px-2 py-1 rounded-full ${getPerformanceBadge(day.customerSatisfaction, { good: 4.0, warning: 3.5 })}`}>
-                  {day.customerSatisfaction.toFixed(1)} ⭐
+                <div className="text-sm text-gray-600">{day?.averageResponseTime || 0}s avg</div>
+                <div className="text-sm text-gray-600">{day?.resolutionRate || 0}% resolved</div>
+                <div className={`text-sm px-2 py-1 rounded-full ${getPerformanceBadge(day?.customerSatisfaction || 0, { good: 4.0, warning: 3.5 })}`}>
+                  {(day?.customerSatisfaction || 0).toFixed(1)} ⭐
                 </div>
               </div>
             </div>
@@ -216,7 +248,7 @@ export const AgentStats: React.FC<AgentStatsProps> = ({ className = '' }) => {
       </div>
 
       {/* Performance Suggestions */}
-      {suggestions.length > 0 && (
+      {suggestions && suggestions.length > 0 && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Improvement Suggestions</h2>
           <div className="space-y-3">
@@ -226,8 +258,8 @@ export const AgentStats: React.FC<AgentStatsProps> = ({ className = '' }) => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <div>
-                  <div className="font-medium text-yellow-800">{suggestion.title}</div>
-                  <div className="text-sm text-yellow-700">{suggestion.description}</div>
+                  <div className="font-medium text-yellow-800">{suggestion?.title || 'Suggestion'}</div>
+                  <div className="text-sm text-yellow-700">{suggestion?.description || 'No description available'}</div>
                 </div>
               </div>
             ))}

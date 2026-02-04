@@ -44,6 +44,19 @@ router.get('/feedback/stats', requireAgent, agentController.getAgentFeedbackStat
 // Agent status update
 router.put('/status', requireAgent, agentController.updateAgentStatus);
 
+// Template management endpoints
+router.post('/templates/seed', agentController.seedTemplates); // One-time seeding endpoint
+router.get('/templates', requireAgent, agentController.getTemplates);
+router.post('/templates', requireAgent, agentController.createTemplate);
+router.put('/templates/:id', requireAgent, agentController.updateTemplate);
+router.delete('/templates/:id', requireAgent, agentController.deleteTemplate);
+router.post('/templates/:id/usage', requireAgent, agentController.updateTemplateUsage);
+
+// Settings management endpoints (PHASE 2)
+router.get('/settings', requireAgent, agentController.getSettings);
+router.put('/settings', requireAgent, agentController.updateSettings);
+router.post('/change-password', requireAgent, agentController.changePassword);
+
 console.log('🔍 AGENT ROUTES REGISTERED - Fresh controller with feedback functions');
 
 export default router;

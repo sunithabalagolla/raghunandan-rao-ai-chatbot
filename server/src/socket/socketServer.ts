@@ -41,37 +41,6 @@ export function initializeSocketServer(httpServer: HTTPServer): SocketIOServer {
   // Authentication middleware (Requirement 0.9)
   io.use(socketAuthMiddleware);
 
-  // Connection handler
-  io.on('connection', (socket: Socket) => {
-    const authSocket = socket as AuthenticatedSocket;
-    
-    console.log(`✅ User connected: ${authSocket.userId || 'anonymous (pending)'} (${authSocket.email || 'no email'})`);
-    console.log(`   Socket ID: ${authSocket.id}`);
-    console.log(`   Transport: ${socket.conn.transport.name}`);
-
-    // Join user's personal room (only if userId is set from JWT auth)
-    if (authSocket.userId) {
-      authSocket.join(`user:${authSocket.userId}`);
-    }
-
-    // Handle disconnection (Requirement 0.3, 0.10)
-    authSocket.on('disconnect', (reason: string) => {
-      console.log(`❌ User disconnected: ${authSocket.userId}`);
-      console.log(`   Reason: ${reason}`);
-      console.log(`   Socket ID: ${authSocket.id}`);
-    });
-
-    // Handle errors
-    authSocket.on('error', (error: Error) => {
-      console.error(`Socket error for user ${authSocket.userId}:`, error.message);
-    });
-
-    // Handle connection errors
-    authSocket.on('connect_error', (error: Error) => {
-      console.error(`Connection error for user ${authSocket.userId}:`, error.message);
-    });
-  });
-
   return io;
 }
 

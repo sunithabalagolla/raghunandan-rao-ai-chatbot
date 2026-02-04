@@ -449,4 +449,10 @@ class SocketService {
 // Export singleton instance
 export const socketService = new SocketService();
 
+// Debug: Make socket service globally available
+if (typeof window !== 'undefined') {
+  (window as any).socketService = socketService;
+  console.log('🔧 Socket service loaded and attached to window');
+}
+
 export default socketService;

@@ -12,17 +12,34 @@ import {
   ChatbotWelcome,
   ChatbotInput,
   ServicesScreen,
-  HelpScreen
+  HelpScreen,
+  LocationSelector
 } from './chatbot';
 import { LanguageSwitcher } from './LanguageSwitcher';
 
 /**
- * Professional Chatbot Widget - With Multilingual Support
+ * Professional Chatbot Widget - With Multilingual Support and Location Selection
  * Supports English, Telugu, and Hindi via i18next
- * Updated: Back button navigation, Services screen
+ * Updated: Back button navigation, Services screen, Location selection flow
  */
 
 type ScreenType = 'welcome' | 'chat' | 'services' | 'help';
+
+interface LocationData {
+  district?: {
+    id: string;
+    name: string;
+  };
+  assembly?: {
+    id: string;
+    name: string;
+  };
+  mandal?: {
+    id: string;
+    name: string;
+  };
+  village?: string;
+}
 
 export const ChatbotWidget = () => {
   const { t, i18n} = useTranslation();
@@ -41,11 +58,20 @@ export const ChatbotWidget = () => {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`);
-  const [userId] = useState(() => `user_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [rateLimitMessage, setRateLimitMessage] = useState('');
   const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
+  const [isConnectedToAgent, setIsConnectedToAgent] = useState(false);
+  const [agentName, setAgentName] = useState<string | null>(null);
+  
+  // Location selection state
+  const [isCollectingLocation, setIsCollectingLocation] = useState(false);
+  const [currentLocationLevel, setCurrentLocationLevel] = useState<'district' | 'assembly' | 'mandal' | 'village'>('district');
+  
+  // Application status state
+  const [showApplicationButtons, setShowApplicationButtons] = useState(false);
+  const [showContinueOptions, setShowContinueOptions] = useState(false);
 
   const socket = useSocket();
 
@@ -59,13 +85,13 @@ export const ChatbotWidget = () => {
 
   useEffect(() => {
     if (!socket.isConnected || !isOpen) return;
-    socket.connectToChat(userId, sessionId, i18n.language as 'en' | 'te' | 'hi');
+    socket.connectToChat(sessionId, i18n.language as 'en' | 'te' | 'hi');
     return () => {
       if (!isOpen) {
-        socket.disconnectFromChat(userId, sessionId);
+        socket.disconnectFromChat(sessionId);
       }
     };
-  }, [socket.isConnected, isOpen, userId, sessionId]);
+  }, [socket.isConnected, isOpen, sessionId]);
 
   useEffect(() => {
     if (!socket.isConnected) return;
@@ -105,10 +131,33 @@ export const ChatbotWidget = () => {
     const handleResponse = (data: any) => {
       if (!isSubscribed) return; // Ignore if unsubscribed
       setIsTyping(false);
+      
+      // Check if AI is asking for location
+      const message = data.message.toLowerCase();
+      if (message.includes('which district are you from') || 
+          message.includes('select your district') ||
+          message.includes('district are you from')) {
+        setIsCollectingLocation(true);
+        setCurrentLocationLevel('district');
+      }
+      
+      // Check if AI is asking for application status
+      if (message.includes('have you already submitted') || 
+          message.includes('application for this issue') ||
+          message.includes('raghunandanrao.in/apply')) {
+        setShowApplicationButtons(true);
+      }
+      
+      // Check if AI is asking what to do after user said no
+      if (message.includes('what would you like to do') && 
+          (message.includes('apply on website') || message.includes('continue without'))) {
+        setShowContinueOptions(true);
+      }
+      
       const botMessage: MessageType = {
         id: `bot_${Date.now()}`,
         text: data.message,
-        sender: 'bot',
+        sender: data.sender === 'agent' ? 'agent' : 'bot', // ← FIX: Detect agent messages
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, botMessage]);
@@ -118,7 +167,7 @@ export const ChatbotWidget = () => {
 
     const handleTyping = (data: any) => {
       if (!isSubscribed) return; // Ignore if unsubscribed
-      if (data.sender === 'bot') {
+      if (data.sender === 'bot' || data.sender === 'agent') {
         setIsTyping(data.isTyping);
       }
     };
@@ -130,6 +179,25 @@ export const ChatbotWidget = () => {
       unsubscribeResponse();
       unsubscribeTyping();
     };
+  }, []);
+
+  // Listen for agent joining
+  useEffect(() => {
+    const unsubscribeAgentJoined = socketService.onAgentJoined(() => {
+      setIsConnectedToAgent(true);
+      setAgentName('Support Agent');
+      
+      // Add system message about agent joining
+      const systemMessage: MessageType = {
+        id: `system_${Date.now()}`,
+        text: 'A support agent has joined the conversation and will assist you.',
+        sender: 'system',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, systemMessage]);
+    });
+
+    return () => unsubscribeAgentJoined();
   }, []);
 
   const handleSendMessage = (text: string) => {
@@ -147,8 +215,75 @@ export const ChatbotWidget = () => {
     setInputValue('');
     setIsTyping(true);
     
-    // Generate userId if not available
-    socket.sendMessage(userId, sessionId, text.trim(), i18n.language as 'en' | 'te' | 'hi');
+    // Send message using correct parameter order
+    socket.sendMessage(sessionId, text.trim(), i18n.language as 'en' | 'te' | 'hi');
+  };
+
+  const handleLocationSelected = (location: LocationData) => {
+    // Determine next level and send appropriate message
+    if (!location.district) {
+      setCurrentLocationLevel('district');
+    } else if (!location.assembly) {
+      setCurrentLocationLevel('assembly');
+      // Send district selection as message
+      handleSendMessage(location.district.name);
+    } else if (!location.mandal) {
+      setCurrentLocationLevel('mandal');
+      // Send assembly selection as message
+      handleSendMessage(location.assembly.name);
+    } else if (!location.village) {
+      setCurrentLocationLevel('village');
+      // Send mandal selection as message
+      handleSendMessage(location.mandal.name);
+    } else {
+      // All levels complete - send village and complete location collection
+      setIsCollectingLocation(false);
+      
+      // Send village selection
+      handleSendMessage(location.village);
+      
+      // Send complete location summary
+      const locationSummary = `My complete location: ${location.village}, ${location.mandal?.name}, ${location.assembly?.name}, ${location.district?.name}`;
+      
+      // Add location summary as user message
+      setTimeout(() => {
+        const locationMessage: MessageType = {
+          id: `user_location_${Date.now()}`,
+          text: locationSummary,
+          sender: 'user',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, locationMessage]);
+        
+        // Send to backend
+        socket.sendMessage(sessionId, locationSummary, i18n.language as 'en' | 'te' | 'hi');
+      }, 500);
+    }
+  };
+
+  const handleApplicationResponse = (hasApplied: boolean) => {
+    setShowApplicationButtons(false);
+    
+    if (hasApplied) {
+      // User has applied - send "Yes" response
+      handleSendMessage('✅ Yes, I have applied');
+    } else {
+      // User hasn't applied - send "No" response
+      handleSendMessage('❌ No, I haven\'t applied yet');
+      setShowContinueOptions(true);
+    }
+  };
+
+  const handleContinueWithoutId = () => {
+    setShowContinueOptions(false);
+    handleSendMessage('➡️ Continue Without Application ID');
+  };
+
+  const handleApplyOnWebsite = () => {
+    setShowContinueOptions(false);
+    handleSendMessage('🌐 Apply on Website');
+    // Open website in new tab
+    window.open('https://raghunandanrao.in/apply', '_blank');
   };
 
   const handlePrimaryActionClick = (action: typeof primaryActions[0]) => {
@@ -223,11 +358,12 @@ export const ChatbotWidget = () => {
           {/* Back Button - Show in chat and services mode */}
           {currentScreen !== 'welcome' && (
             <div style={{
-              backgroundColor: '#FFFFFF',
+              backgroundColor: isConnectedToAgent ? '#EFF6FF' : '#FFFFFF',
               borderBottom: '1px solid #E5E7EB',
               padding: '12px 16px',
               display: 'flex',
-              alignItems: 'center'
+              alignItems: 'center',
+              justifyContent: 'space-between'
             }}>
               <button
                 onClick={handleBack}
@@ -254,6 +390,29 @@ export const ChatbotWidget = () => {
                 </svg>
                 <span>{t('chatbot.header.back')}</span>
               </button>
+              
+              {/* Agent Status Indicator */}
+              {isConnectedToAgent && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '6px 12px',
+                  backgroundColor: '#10B981',
+                  color: 'white',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  fontWeight: '600'
+                }}>
+                  <div style={{
+                    width: '8px',
+                    height: '8px',
+                    backgroundColor: 'white',
+                    borderRadius: '50%'
+                  }}></div>
+                  Connected to {agentName}
+                </div>
+              )}
             </div>
           )}
 
@@ -286,9 +445,134 @@ export const ChatbotWidget = () => {
             )}
 
             {/* Chat Messages */}
-            {currentScreen === 'chat' && messages.map((message) => (
-              <Message key={message.id} message={message} />
+            {currentScreen === 'chat' && messages.map((message, index) => (
+              <div key={message.id}>
+                <Message message={message} />
+                
+                {/* Application Status Buttons */}
+                {showApplicationButtons && index === messages.length - 1 && 
+                 message.sender === 'bot' && 
+                 message.text.toLowerCase().includes('have you already submitted') && (
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    marginTop: '12px',
+                    padding: '12px',
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    border: '1px solid #E5E7EB'
+                  }}>
+                    <button
+                      onClick={() => handleApplicationResponse(true)}
+                      style={{
+                        padding: '12px 16px',
+                        backgroundColor: '#10B981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'background-color 200ms ease-out'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10B981'}
+                    >
+                      ✅ Yes, I have applied
+                    </button>
+                    <button
+                      onClick={() => handleApplicationResponse(false)}
+                      style={{
+                        padding: '12px 16px',
+                        backgroundColor: '#F97316',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'background-color 200ms ease-out'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EA580C'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F97316'}
+                    >
+                      ❌ No, I haven't applied yet
+                    </button>
+                  </div>
+                )}
+
+                {/* Continue Options Buttons */}
+                {showContinueOptions && index === messages.length - 1 && 
+                 message.sender === 'bot' && 
+                 message.text.toLowerCase().includes('what would you like to do') && (
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    marginTop: '12px',
+                    padding: '12px',
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    border: '1px solid #E5E7EB'
+                  }}>
+                    <button
+                      onClick={handleApplyOnWebsite}
+                      style={{
+                        padding: '12px 16px',
+                        backgroundColor: '#3B82F6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'background-color 200ms ease-out'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563EB'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3B82F6'}
+                    >
+                      🌐 Apply on Website
+                    </button>
+                    <button
+                      onClick={handleContinueWithoutId}
+                      style={{
+                        padding: '12px 16px',
+                        backgroundColor: '#6B7280',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'background-color 200ms ease-out'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4B5563'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6B7280'}
+                    >
+                      ➡️ Continue Without Application ID
+                    </button>
+                  </div>
+                )}
+              </div>
             ))}
+
+            {/* Location Selection Component */}
+            {currentScreen === 'chat' && isCollectingLocation && (
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '16px',
+                marginTop: '12px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                border: '2px solid #3B82F6'
+              }}>
+                <LocationSelector
+                  currentLevel={currentLocationLevel}
+                  onLocationSelected={handleLocationSelected}
+                />
+              </div>
+            )}
 
             {/* Typing Indicator */}
             {currentScreen === 'chat' && isTyping && <TypingIndicator />}

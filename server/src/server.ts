@@ -53,10 +53,33 @@ const startServer = async (): Promise<void> => {
 
     // Register socket event handlers for each connection
     io.on('connection', (socket: any) => {
+      const authSocket = socket as any;
+      
+      console.log(`✅ User connected: ${authSocket.userId || 'anonymous (pending)'} (${authSocket.email || 'no email'})`);
+      console.log(`   Socket ID: ${authSocket.id}`);
+      console.log(`   Transport: ${socket.conn.transport.name}`);
+
+      // Join user's personal room (only if userId is set from JWT auth)
+      if (authSocket.userId) {
+        authSocket.join(`user:${authSocket.userId}`);
+      }
+
       console.log('🔧 Registering chat handlers for new connection');
       registerChatHandlers(io, socket);
       registerHandoffHandlers(io, socket);
       registerAgentHandlers(io, socket);
+
+      // Handle disconnection
+      authSocket.on('disconnect', (reason: string) => {
+        console.log(`❌ User disconnected: ${authSocket.userId}`);
+        console.log(`   Reason: ${reason}`);
+        console.log(`   Socket ID: ${authSocket.id}`);
+      });
+
+      // Handle errors
+      authSocket.on('error', (error: Error) => {
+        console.error(`Socket error for user ${authSocket.userId}:`, error.message);
+      });
     });
 
     console.log('✅ Socket.io initialized with chat, handoff, and agent handlers');

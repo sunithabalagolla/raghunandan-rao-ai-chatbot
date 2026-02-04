@@ -128,13 +128,32 @@ class TicketManagerService {
    */
   async assignTicket(ticketId: string, agentId: string, assignmentMethod: 'manual' | 'auto' | 'emergency' = 'manual'): Promise<void> {
     try {
+      console.log(`🎫 Attempting to assign ticket ${ticketId} to agent ${agentId}`);
+      
       const ticket = await HandoffTicket.findById(ticketId);
-      if (!ticket || ticket.status !== 'waiting') {
-        throw new Error('Ticket not available for assignment');
+      console.log(`🔍 Ticket found:`, ticket ? {
+        id: ticket._id,
+        status: ticket.status,
+        assignedAgentId: ticket.assignedAgentId,
+        createdAt: ticket.createdAt
+      } : 'NOT FOUND');
+      
+      if (!ticket) {
+        throw new Error('Ticket not found');
+      }
+      
+      if (ticket.status !== 'waiting') {
+        throw new Error(`Ticket not available for assignment - current status: ${ticket.status}`);
       }
 
       const agent = await User.findById(agentId);
-      if (!agent || agent.role !== 'agent') {
+      console.log(`🔍 Agent found:`, agent ? {
+        id: agent._id,
+        email: agent.email,
+        role: agent.role
+      } : 'NOT FOUND');
+      
+      if (!agent || !agent.role || !['agent', 'supervisor', 'admin'].includes(agent.role)) {
         throw new Error('Invalid agent for assignment');
       }
 
@@ -253,7 +272,7 @@ class TicketManagerService {
       }
 
       const toAgent = await User.findById(toAgentId);
-      if (!toAgent || toAgent.role !== 'agent') {
+      if (!toAgent || !toAgent.role || toAgent.role !== 'agent') {
         throw new Error('Invalid target agent for transfer');
       }
 

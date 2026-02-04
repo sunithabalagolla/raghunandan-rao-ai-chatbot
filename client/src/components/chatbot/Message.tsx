@@ -1,4 +1,4 @@
-import type { Message as MessageType } from "./chatbot.types";
+import type { Message as MessageType } from "./types";
 
 interface MessageProps {
     message: MessageType
@@ -35,25 +35,51 @@ const parseMarkdown = (text: string): string => {
 
 export const Message = ({ message }: MessageProps) => {
     const isBot = message.sender === 'bot';
+    const isAgent = message.sender === 'agent';
+    const isSystem = message.sender === 'system';
+    const isUser = message.sender === 'user';
     
     return (
         <div
             key={message.id}
-            className={`flex gap-3 mb-4 ${message.sender === 'user' ? 'flex-row-reverse' : ''}`}
+            className={`flex gap-3 mb-4 ${isUser ? 'flex-row-reverse' : ''}`}
         >
-            <div className={`flex-1 ${message.sender === 'user' ? 'flex justify-end' : ''}`}>
+            <div className={`flex-1 ${isUser ? 'flex justify-end' : ''}`}>
                 <div
                     style={{
                         display: 'inline-block',
                         borderRadius: '16px',
                         padding: '12px 16px',
                         maxWidth: '85%',
-                        backgroundColor: message.sender === 'user' ? '#3B82F6' : '#FFFFFF',
-                        color: message.sender === 'user' ? '#FFFFFF' : '#1F2937',
-                        boxShadow: message.sender === 'user' ? 'none' : '0 1px 3px rgba(0,0,0,0.1)'
+                        backgroundColor: 
+                            isUser ? '#3B82F6' : 
+                            isAgent ? '#10B981' : 
+                            isSystem ? '#F3F4F6' :
+                            '#FFFFFF',
+                        color: 
+                            isUser ? '#FFFFFF' : 
+                            isAgent ? '#FFFFFF' : 
+                            isSystem ? '#6B7280' :
+                            '#1F2937',
+                        boxShadow: isUser || isAgent ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
+                        border: isSystem ? '1px solid #E5E7EB' : 'none'
                     }}
                 >
-                    {isBot ? (
+                    {/* Agent/Bot Label */}
+                    {(isAgent || isBot) && (
+                        <div style={{
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            marginBottom: '4px',
+                            opacity: 0.8,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                        }}>
+                            {isAgent ? '👤 Support Agent' : '🤖 AI Assistant'}
+                        </div>
+                    )}
+                    
+                    {(isBot || isAgent) ? (
                         <div 
                             style={{ fontSize: '14px', lineHeight: '1.6', margin: 0 }}
                             dangerouslySetInnerHTML={{ __html: parseMarkdown(message.text) }}

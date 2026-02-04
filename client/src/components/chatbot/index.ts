@@ -4,6 +4,7 @@ export { ChatbotButton } from './ChatbotButton';
 export { ChatbotHeader } from './ChatbotHeader';
 export { ChatbotInput } from './ChatbotInput';
 export { ChatbotWelcome } from './ChatbotWelcome';
+export { LocationSelector } from './LocationSelector';
 export { Message } from './Message';
 export { TypingIndicator } from './TypingIndicator';
 export { ServicesScreen } from './ServicesScreen';

@@ -27,6 +27,9 @@ export interface IUser {
     preferences?: {
       browserNotifications: boolean;
       soundAlerts: boolean;
+      soundVolume?: number;
+      autoRefreshInterval?: string;
+      theme?: string;
     }
 
   };

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { AuthUser, AuthContextType, LoginCredentials } from '../types/auth.types';
 import { apiService } from '../services/api';
+import agentSocketService from '../services/socketService';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -24,6 +25,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (storedToken && storedUser) {
           setToken(storedToken);
           setUser(JSON.parse(storedUser));
+          
+          // Initialize socket connection if user is already authenticated
+          agentSocketService.connect();
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -71,6 +75,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem('authUser', JSON.stringify(userWithRole));
         apiService.setAuthToken(accessToken);
         
+        // Initialize socket connection for real-time communication
+        agentSocketService.connect();
+        
         console.log('✅ Login successful, user authenticated');
       } else {
         throw new Error(response.message || 'Login failed');
@@ -85,6 +92,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = (): void => {
     try {
+      // Disconnect socket
+      agentSocketService.disconnect();
+      
       // Call logout API (fire and forget)
       apiService.logout().catch(console.warn);
 

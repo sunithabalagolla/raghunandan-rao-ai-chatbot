@@ -78,6 +78,26 @@ export const TicketQueue: React.FC<TicketQueueProps> = ({ onTicketAccept }) => {
           estimatedWaitTime: ticket.estimatedWaitTime
         }));
         
+        // Check for new tickets and notify agent
+        if (tickets.length > 0) { // Only check if we have previous tickets (not initial load)
+          const newTickets = apiTickets.filter((newTicket: any) => 
+            !tickets.some(existingTicket => existingTicket.id === newTicket.id)
+          );
+          
+          // Notify about new tickets
+          newTickets.forEach((ticket: any) => {
+            console.log('🆕 New ticket detected:', ticket.id);
+            // Import notification service dynamically to avoid circular imports
+            import('../../services/notificationService').then(({ notificationService }) => {
+              notificationService.showTicketNotification('new', {
+                id: ticket.id,
+                subject: ticket.subject,
+                priority: ticket.priority
+              });
+            });
+          });
+        }
+        
         setTickets(apiTickets);
       } else {
         setError('Failed to fetch tickets');
@@ -136,21 +156,27 @@ export const TicketQueue: React.FC<TicketQueueProps> = ({ onTicketAccept }) => {
 
   const handleAcceptTicket = async (ticketId: string) => {
     try {
-      const response = await apiService.post(`/agent/tickets/${ticketId}/accept`);
+      // Import socket service
+      const { default: agentSocketService } = await import('../../services/socketService');
       
-      if (response.data.success) {
-        // Remove ticket from local state
-        setTickets(prev => prev.filter(ticket => ticket.id !== ticketId));
-        onTicketAccept(ticketId);
-        
-        // Show success message
-        console.log('Ticket accepted successfully');
-      } else {
-        setError('Failed to accept ticket');
+      // Ensure socket is connected
+      if (!agentSocketService.isConnected()) {
+        agentSocketService.connect();
+        // Wait a moment for connection
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
+      
+      // Accept ticket via WebSocket
+      agentSocketService.acceptTicket(ticketId);
+      
+      // Remove ticket from local state immediately for better UX
+      setTickets(prev => prev.filter(ticket => ticket.id !== ticketId));
+      onTicketAccept(ticketId);
+      
+      console.log('Ticket acceptance sent via WebSocket:', ticketId);
     } catch (err: any) {
       console.error('Error accepting ticket:', err);
-      setError(err.response?.data?.message || 'Failed to accept ticket');
+      setError('Failed to accept ticket via WebSocket');
     }
   };
 
@@ -164,7 +190,7 @@ export const TicketQueue: React.FC<TicketQueueProps> = ({ onTicketAccept }) => {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
         <div className="flex items-center">
           <div className="text-red-400 mr-3">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -172,8 +198,8 @@ export const TicketQueue: React.FC<TicketQueueProps> = ({ onTicketAccept }) => {
             </svg>
           </div>
           <div>
-            <h3 className="text-red-800 font-medium">Error loading tickets</h3>
-            <p className="text-red-700 text-sm mt-1">{error}</p>
+            <h3 className="text-red-800 dark:text-red-300 font-medium">Error loading tickets</h3>
+            <p className="text-red-700 dark:text-red-400 text-sm mt-1">{error}</p>
           </div>
         </div>
         <button
@@ -189,18 +215,18 @@ export const TicketQueue: React.FC<TicketQueueProps> = ({ onTicketAccept }) => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Ticket Queue</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Ticket Queue</h2>
         <div className="flex items-center space-x-4">
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-gray-500 dark:text-gray-400">
             {filteredTickets.length} tickets
           </span>
           <div className="flex items-center space-x-2">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-sm text-gray-600">Live</span>
+            <span className="text-sm text-gray-600 dark:text-gray-300">Live</span>
           </div>
           <button
             onClick={fetchTickets}
-            className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors"
             disabled={loading}
           >
             {loading ? 'Refreshing...' : 'Refresh'}

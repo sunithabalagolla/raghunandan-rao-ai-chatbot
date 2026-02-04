@@ -172,12 +172,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, activeView, 
 
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out border-r border-gray-200
+        fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-gray-800 shadow-2xl transform transition-transform duration-300 ease-in-out border-r border-gray-200 dark:border-gray-700 flex flex-col
         lg:translate-x-0 lg:static lg:inset-0
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         {/* Sidebar Header */}
-        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-indigo-600">
+        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-600 to-indigo-600 flex-shrink-0">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <div className="w-10 h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center backdrop-blur-sm">
@@ -202,7 +202,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, activeView, 
         </div>
 
         {/* Navigation Menu */}
-        <nav className="mt-6 px-3">
+        <nav className="flex-1 overflow-y-auto px-3 py-6" style={{ height: 'calc(100vh - 16rem)' }}>
           <div className="space-y-2">
             {visibleMenuItems.map((item) => (
               <button
@@ -212,14 +212,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, activeView, 
                   group flex items-center justify-between px-4 py-3 text-sm font-medium rounded-xl w-full text-left transition-all duration-200 hover:scale-105
                   ${activeItem === item.id
                     ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg'
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
                   }
                 `}
               >
                 <div className="flex items-center">
                   <span className={`
                     mr-3 flex-shrink-0 transition-colors duration-200
-                    ${activeItem === item.id ? 'text-white' : 'text-gray-500 group-hover:text-gray-700'}
+                    ${activeItem === item.id ? 'text-white' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200'}
                   `}>
                     {item.icon}
                   </span>
@@ -230,7 +230,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, activeView, 
                     inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-full min-w-[20px] h-5
                     ${activeItem === item.id 
                       ? 'bg-white bg-opacity-20 text-white' 
-                      : 'bg-red-100 text-red-800'
+                      : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                     }
                   `}>
                     {item.badge}
@@ -242,9 +242,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, activeView, 
         </nav>
 
         {/* Agent Status Section */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-gray-50">
+        <div className="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
           <div className="mb-3">
-            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+            <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
               Agent Status
             </div>
             <AgentStatusToggle />
@@ -252,13 +252,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, activeView, 
           
           {/* Quick Stats */}
           <div className="grid grid-cols-2 gap-3 mt-4">
-            <div className="text-center p-2 bg-white rounded-lg shadow-sm">
-              <div className="text-lg font-bold text-blue-600">12</div>
-              <div className="text-xs text-gray-600">Pending</div>
+            <div className="text-center p-2 bg-white dark:bg-gray-700 rounded-lg shadow-sm">
+              <div className="text-lg font-bold text-blue-600 dark:text-blue-400">12</div>
+              <div className="text-xs text-gray-600 dark:text-gray-300">Pending</div>
             </div>
-            <div className="text-center p-2 bg-white rounded-lg shadow-sm">
-              <div className="text-lg font-bold text-green-600">8</div>
-              <div className="text-xs text-gray-600">Resolved</div>
+            <div className="text-center p-2 bg-white dark:bg-gray-700 rounded-lg shadow-sm">
+              <div className="text-lg font-bold text-green-600 dark:text-green-400">8</div>
+              <div className="text-xs text-gray-600 dark:text-gray-300">Resolved</div>
             </div>
           </div>
         </div>

@@ -47,8 +47,12 @@ export function useSocket(): UseSocketReturn {
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
-  // Generate anonymous user ID if not authenticated
-  const userId = user?.id || `anonymous_${Date.now()}`;
+  // Generate anonymous user ID if not authenticated - MUST be stable across re-renders
+  const userIdRef = useRef<string | null>(null);
+  if (!userIdRef.current) {
+    userIdRef.current = user?.id || `anonymous_${Date.now()}`;
+  }
+  const userId = userIdRef.current;
 
   /**
    * Connect to Socket.io server

@@ -17,7 +17,7 @@ export const ChatbotWelcome = ({ onActionClick, onServicesClick, onHelpClick }: 
   const boxPadding = isTelugu ? '18px 22px' : isHindi ? '18px 20px' : '20px 24px';
   const lineHeight = isTelugu ? '1.65' : isHindi ? '1.65' : '1.5';
   const footerGap = isTelugu ? '30px' : isHindi ? '30px' : '32px';
-  const titleFontSize = isTelugu ? '17px' : isHindi ? '17px' : '18px';
+  const titleFontSize = isTelugu ? '15px' : isHindi ? '15px' : '16px';
   const descFontSize = isTelugu ? '13px' : isHindi ? '13.5px' : '14px';
   const titleFontWeight = isTelugu ? '700' : isHindi ? '700' : '700';
   const descFontWeight = isTelugu ? '500' : isHindi ? '500' : '400';
@@ -59,7 +59,7 @@ export const ChatbotWelcome = ({ onActionClick, onServicesClick, onHelpClick }: 
           <ActionButton
             key={action.id}
             icon={action.icon}
-            label={t(`chatbot.actions.${action.id}`)}
+            label={action.label}
             color={action.color}
             bgColor={action.bgColor}
             borderColor={action.borderColor}

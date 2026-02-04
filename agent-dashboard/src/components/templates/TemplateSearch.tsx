@@ -8,6 +8,8 @@ interface TemplateSearchProps {
   categories: string[];
   showPersonalOnly: boolean;
   onPersonalToggle: (showPersonal: boolean) => void;
+  showFavoritesOnly: boolean;
+  onFavoritesToggle: (showFavorites: boolean) => void;
 }
 
 export const TemplateSearch: React.FC<TemplateSearchProps> = ({
@@ -17,7 +19,9 @@ export const TemplateSearch: React.FC<TemplateSearchProps> = ({
   onCategoryChange,
   categories,
   showPersonalOnly,
-  onPersonalToggle
+  onPersonalToggle,
+  showFavoritesOnly,
+  onFavoritesToggle
 }) => {
   return (
     <div className="space-y-4">
@@ -55,6 +59,21 @@ export const TemplateSearch: React.FC<TemplateSearchProps> = ({
           </select>
         </div>
 
+        {/* Favorites Filter */}
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="favoritesOnly"
+            checked={showFavoritesOnly}
+            onChange={(e) => onFavoritesToggle(e.target.checked)}
+            className="h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+          />
+          <label htmlFor="favoritesOnly" className="text-sm text-gray-700 flex items-center">
+            <span className="mr-1">⭐</span>
+            Favorites only
+          </label>
+        </div>
+
         {/* Personal Filter */}
         <div className="flex items-center space-x-2">
           <input
@@ -70,18 +89,66 @@ export const TemplateSearch: React.FC<TemplateSearchProps> = ({
         </div>
 
         {/* Clear Filters */}
-        {(searchQuery || selectedCategory !== 'all' || showPersonalOnly) && (
+        {(searchQuery || selectedCategory !== 'all' || showPersonalOnly || showFavoritesOnly) && (
           <button
             onClick={() => {
               onSearchChange('');
               onCategoryChange('all');
               onPersonalToggle(false);
+              onFavoritesToggle(false);
             }}
             className="text-sm text-blue-600 hover:text-blue-800 underline"
           >
             Clear all filters
           </button>
         )}
+      </div>
+
+      {/* Quick Filter Buttons */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => onFavoritesToggle(!showFavoritesOnly)}
+          className={`px-3 py-1 text-sm rounded-full transition-colors ${
+            showFavoritesOnly 
+              ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' 
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          ⭐ Favorites
+        </button>
+        
+        <button
+          onClick={() => onCategoryChange(selectedCategory === 'greetings' ? 'all' : 'greetings')}
+          className={`px-3 py-1 text-sm rounded-full transition-colors ${
+            selectedCategory === 'greetings' 
+              ? 'bg-green-100 text-green-800 border border-green-300' 
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          👋 Greetings
+        </button>
+        
+        <button
+          onClick={() => onCategoryChange(selectedCategory === 'technical' ? 'all' : 'technical')}
+          className={`px-3 py-1 text-sm rounded-full transition-colors ${
+            selectedCategory === 'technical' 
+              ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          🔧 Technical
+        </button>
+        
+        <button
+          onClick={() => onCategoryChange(selectedCategory === 'closing' ? 'all' : 'closing')}
+          className={`px-3 py-1 text-sm rounded-full transition-colors ${
+            selectedCategory === 'closing' 
+              ? 'bg-purple-100 text-purple-800 border border-purple-300' 
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          👋 Closing
+        </button>
       </div>
     </div>
   );

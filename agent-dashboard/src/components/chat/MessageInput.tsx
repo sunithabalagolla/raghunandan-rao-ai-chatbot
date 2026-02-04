@@ -23,6 +23,9 @@ interface MessageInputProps {
   agentName?: string;
   ticketId?: string;
   customerLanguage?: SupportedLanguage;
+  onTyping?: (isTyping: boolean) => void;
+  pendingTemplateInsert?: any;
+  onTemplateInserted?: () => void;
 }
 
 export const MessageInput: React.FC<MessageInputProps> = ({ 
@@ -30,17 +33,44 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   customerName = 'Customer',
   agentName = 'Agent',
   ticketId = '',
-  customerLanguage = 'en'
+  customerLanguage = 'en',
+  onTyping,
+  pendingTemplateInsert,
+  onTemplateInserted
 }) => {
   const [message, setMessage] = useState('');
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
   const [showTranslationAssistant, setShowTranslationAssistant] = useState(false);
   const [showSlashDropdown, setShowSlashDropdown] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const typingTimeoutRef = useRef<number | null>(null);
+
+  // Handle pending template insertion from Templates page
+  useEffect(() => {
+    if (pendingTemplateInsert) {
+      console.log('🎯 MessageInput: Processing pending template insert:', pendingTemplateInsert);
+      const processedContent = processTemplatePlaceholders(pendingTemplateInsert.content);
+      setMessage(processedContent);
+      
+      // Focus the textarea
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
+      
+      // Clear the pending template
+      if (onTemplateInserted) {
+        onTemplateInserted();
+      }
+    }
+  }, [pendingTemplateInsert, onTemplateInserted]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim()) {
+      // Stop typing indicator before sending
+      handleTypingStop();
+      
       onSendMessage(message.trim());
       setMessage('');
       if (textareaRef.current) {
@@ -63,13 +93,60 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }
   };
 
-  // Auto-resize textarea
+  // Handle typing indicators
+  const handleTypingStart = () => {
+    if (!isTyping && onTyping) {
+      setIsTyping(true);
+      onTyping(true);
+    }
+    
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Set timeout to stop typing indicator
+    typingTimeoutRef.current = setTimeout(() => {
+      if (isTyping && onTyping) {
+        setIsTyping(false);
+        onTyping(false);
+      }
+    }, 2000);
+  };
+
+  const handleTypingStop = () => {
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    if (isTyping && onTyping) {
+      setIsTyping(false);
+      onTyping(false);
+    }
+  };
+
+  // Auto-resize textarea and handle typing
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
+    
+    // Handle typing indicators
+    if (message.trim()) {
+      handleTypingStart();
+    } else {
+      handleTypingStop();
+    }
   }, [message]);
+
+  // Cleanup typing timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Handle translation selection
   const handleTranslationSelect = (translation: string) => {
@@ -170,32 +247,32 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   );
 
   return (
-    <div className="bg-white border-t border-gray-200 p-4 relative">
+    <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 relative">
       {/* Slash Command Dropdown */}
       {showSlashDropdown && filteredTemplates.length > 0 && (
-        <div className="absolute bottom-full left-4 right-4 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+        <div className="absolute bottom-full left-4 right-4 mb-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
           <div className="p-2">
-            <div className="text-xs text-gray-500 mb-2 px-2">Quick Templates:</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 px-2">Quick Templates:</div>
             {filteredTemplates.map((template) => (
               <button
                 key={template.command}
                 onClick={() => handleSlashCommand(template.command)}
-                className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm flex items-center justify-between"
+                className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm flex items-center justify-between"
               >
                 <div>
-                  <span className="font-mono text-blue-600">{template.command}</span>
-                  <span className="ml-2 text-gray-600">{template.description}</span>
+                  <span className="font-mono text-blue-600 dark:text-blue-400">{template.command}</span>
+                  <span className="ml-2 text-gray-600 dark:text-gray-300">{template.description}</span>
                 </div>
-                <span className="text-xs text-gray-400 capitalize">{template.category}</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500 capitalize">{template.category}</span>
               </button>
             ))}
-            <div className="border-t border-gray-100 mt-2 pt-2">
+            <div className="border-t border-gray-100 dark:border-gray-700 mt-2 pt-2">
               <button
                 onClick={() => {
                   setShowTemplateLibrary(true);
                   setShowSlashDropdown(false);
                 }}
-                className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm text-blue-600"
+                className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm text-blue-600 dark:text-blue-400"
               >
                 📚 Browse all templates...
               </button>
@@ -210,7 +287,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           <button
             type="button"
             onClick={() => setShowTemplateLibrary(true)}
-            className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             title="Open Template Library"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -225,7 +302,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             <button
               type="button"
               onClick={() => setShowTranslationAssistant(true)}
-              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               title={`Translation Assistant (${languageService.formatLanguageName(customerLanguage)})`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -243,7 +320,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type your message... (use / for quick templates)"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none max-h-32"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none max-h-32 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             rows={1}
           />
         </div>
@@ -260,7 +337,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         </button>
       </form>
 
-      <div className="text-xs text-gray-500 mt-2 flex items-center justify-between">
+      <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center justify-between">
         <span>Press Enter to send, Shift+Enter for new line</span>
         <span className="flex items-center space-x-4">
           <span>/ for quick templates</span>

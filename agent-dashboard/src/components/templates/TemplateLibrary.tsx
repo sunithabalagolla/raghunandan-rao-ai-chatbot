@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { TemplateCard } from './TemplateCard';
 import { TemplateEditor } from './TemplateEditor';
 import { TemplateSearch } from './TemplateSearch';
+import { notificationService } from '../../services/notificationService';
+import { apiService } from '../../services/api';
 
 interface Template {
   id: string;
@@ -15,19 +17,24 @@ interface Template {
   createdBy: string;
   createdAt: Date;
   shortcut?: string;
+  isFavorite?: boolean;
 }
 
 interface TemplateLibraryProps {
   onTemplateSelect?: (template: Template) => void;
   isModal?: boolean;
   onClose?: () => void;
+  activeTicketId?: string | null;
 }
 
 export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ 
   onTemplateSelect, 
   isModal = false, 
-  onClose 
+  onClose,
+  activeTicketId 
 }) => {
+  console.log('🎯 TemplateLibrary component mounted');
+  
   const [templates, setTemplates] = useState<Template[]>([]);
   const [filteredTemplates, setFilteredTemplates] = useState<Template[]>([]);
   const [showEditor, setShowEditor] = useState(false);
@@ -35,82 +42,100 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showPersonalOnly, setShowPersonalOnly] = useState(false);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
-  // Mock templates data
+  // Load templates from database
   useEffect(() => {
-    const mockTemplates: Template[] = [
-      {
-        id: '1',
-        title: 'Welcome Greeting',
-        content: 'Hello {{customerName}}! Thank you for contacting us. I\'m {{agentName}} and I\'ll be happy to help you today. How can I assist you?',
-        category: 'greetings',
-        tags: ['welcome', 'greeting', 'introduction'],
-        isPersonal: false,
-        usageCount: 45,
-        lastUsed: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        createdBy: 'System',
-        createdAt: new Date('2024-01-01'),
-        shortcut: '/welcome'
-      },
-      {
-        id: '2',
-        title: 'Technical Issue Investigation',
-        content: 'I understand you\'re experiencing a technical issue. Let me investigate this for you. Could you please provide me with:\n\n1. What exactly happened?\n2. When did this issue start?\n3. Have you tried any troubleshooting steps?\n\nThis information will help me assist you better.',
-        category: 'technical',
-        tags: ['technical', 'investigation', 'troubleshooting'],
-        isPersonal: false,
-        usageCount: 32,
-        lastUsed: new Date(Date.now() - 1 * 60 * 60 * 1000),
-        createdBy: 'System',
-        createdAt: new Date('2024-01-01'),
-        shortcut: '/tech'
-      },
-      {
-        id: '3',
-        title: 'Billing Inquiry Response',
-        content: 'Thank you for your billing inquiry. I\'ll be happy to help you with this. For security purposes, I\'ll need to verify your account information first. Could you please provide:\n\n- Your account number or email address\n- The last 4 digits of the payment method on file\n\nOnce verified, I can review your billing details.',
-        category: 'billing',
-        tags: ['billing', 'verification', 'security'],
-        isPersonal: false,
-        usageCount: 28,
-        createdBy: 'System',
-        createdAt: new Date('2024-01-01'),
-        shortcut: '/billing'
-      },
-      {
-        id: '4',
-        title: 'My Personal Closing',
-        content: 'Thank you for choosing our service, {{customerName}}! I\'m glad I could help resolve your {{issueType}} today. If you have any other questions, please don\'t hesitate to reach out. Have a wonderful day! 😊',
-        category: 'closing',
-        tags: ['closing', 'personal', 'friendly'],
-        isPersonal: true,
-        usageCount: 15,
-        lastUsed: new Date(Date.now() - 30 * 60 * 1000),
-        createdBy: 'Current Agent',
-        createdAt: new Date('2024-02-15'),
-        shortcut: '/myclose'
-      },
-      {
-        id: '5',
-        title: 'Escalation Notice',
-        content: 'I understand this is a complex issue that requires additional expertise. I\'m going to escalate your case to our specialized team who will be better equipped to help you. They will contact you within {{timeframe}} with a resolution. Your case reference number is {{caseNumber}}.',
-        category: 'escalation',
-        tags: ['escalation', 'specialist', 'complex'],
-        isPersonal: false,
-        usageCount: 12,
-        createdBy: 'System',
-        createdAt: new Date('2024-01-01'),
-        shortcut: '/escalate'
-      }
-    ];
+    console.log('🔄 useEffect running - fetching templates');
+    
+    const fetchTemplates = async () => {
+      try {
+        console.log('📡 apiService:', apiService);
+        console.log('📡 getTemplates function:', apiService.getTemplates);
+        
+        console.log('🔄 Fetching templates from API...');
+        const response = await apiService.getTemplates();
+        console.log('✅ Templates API response:', JSON.stringify(response, null, 2));
+        console.log('✅ response.data:', response.data);
+        console.log('✅ response.data.templates:', response.data.templates);
 
-    setTemplates(mockTemplates);
-    setFilteredTemplates(mockTemplates);
+        if (response.success && response.data.templates) {
+          // Transform database templates to frontend format
+          const dbTemplates = response.data.templates.map((template: any) => ({
+            id: template._id,
+            title: template.title,
+            content: template.content,
+            category: template.category.toLowerCase(),
+            tags: template.tags || [],
+            isPersonal: !template.isShared,
+            usageCount: template.usageCount || 0,
+            lastUsed: template.lastUsedAt ? new Date(template.lastUsedAt) : undefined,
+            createdBy: template.isShared ? 'System' : 'Personal',
+            createdAt: new Date(template.createdAt),
+            shortcut: template.shortcut,
+            isFavorite: false // TODO: Add favorites to database model
+          }));
+
+          console.log(`✅ Loaded ${dbTemplates.length} templates from database`);
+          setTemplates(dbTemplates);
+          setFilteredTemplates(dbTemplates);
+        } else {
+          console.warn('⚠️ No templates found in API response, using fallback');
+          loadFallbackTemplates();
+        }
+      } catch (error) {
+        console.error('❌ Failed to fetch templates from API:', error);
+        console.log('🔄 Loading fallback templates...');
+        loadFallbackTemplates();
+      }
+    };
+
+    const loadFallbackTemplates = () => {
+      // Fallback templates if API fails
+      const fallbackTemplates: Template[] = [
+        {
+          id: 'fallback-1',
+          title: 'Welcome Greeting',
+          content: 'Hello {{customerName}}! Thank you for contacting us. I\'m {{agentName}} and I\'ll be happy to help you today. How can I assist you?',
+          category: 'greetings',
+          tags: ['welcome', 'greeting', 'introduction'],
+          isPersonal: false,
+          usageCount: 0,
+          createdBy: 'System',
+          createdAt: new Date(),
+          shortcut: '/welcome',
+          isFavorite: true
+        },
+        {
+          id: 'fallback-2',
+          title: 'Technical Issue Investigation',
+          content: 'I understand you\'re experiencing a technical issue. Let me investigate this for you. Could you please provide me with:\n\n1. What exactly happened?\n2. When did this issue start?\n3. Have you tried any troubleshooting steps?\n\nThis information will help me assist you better.',
+          category: 'technical',
+          tags: ['technical', 'investigation', 'troubleshooting'],
+          isPersonal: false,
+          usageCount: 0,
+          createdBy: 'System',
+          createdAt: new Date(),
+          shortcut: '/tech',
+          isFavorite: false
+        }
+      ];
+
+      setTemplates(fallbackTemplates);
+      setFilteredTemplates(fallbackTemplates);
+    };
+
+    fetchTemplates();
   }, []);
 
   // Filter templates based on search and filters
   useEffect(() => {
     let filtered = templates;
+
+    // Favorites filter (applied first for priority)
+    if (showFavoritesOnly) {
+      filtered = filtered.filter(template => template.isFavorite);
+    }
 
     // Search filter
     if (searchQuery) {
@@ -131,11 +156,18 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
       filtered = filtered.filter(template => template.isPersonal);
     }
 
-    // Sort by usage count and last used
+    // Sort by favorites first, then usage count and last used
     filtered.sort((a, b) => {
+      // Favorites first
+      if (a.isFavorite && !b.isFavorite) return -1;
+      if (!a.isFavorite && b.isFavorite) return 1;
+      
+      // Then by usage count
       if (a.usageCount !== b.usageCount) {
         return b.usageCount - a.usageCount;
       }
+      
+      // Finally by last used
       if (a.lastUsed && b.lastUsed) {
         return b.lastUsed.getTime() - a.lastUsed.getTime();
       }
@@ -143,7 +175,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
     });
 
     setFilteredTemplates(filtered);
-  }, [templates, searchQuery, selectedCategory, showPersonalOnly]);
+  }, [templates, searchQuery, selectedCategory, showPersonalOnly, showFavoritesOnly]);
 
   const handleCreateTemplate = () => {
     setEditingTemplate(null);
@@ -175,7 +207,8 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
         usageCount: 0,
         createdBy: 'Current Agent',
         createdAt: new Date(),
-        shortcut: templateData.shortcut
+        shortcut: templateData.shortcut,
+        isFavorite: false
       };
       setTemplates(prev => [...prev, newTemplate]);
     }
@@ -189,13 +222,63 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
     }
   };
 
-  const handleUseTemplate = (template: Template) => {
-    // Update usage count
+  const handleToggleFavorite = (templateId: string) => {
+    setTemplates(prev => prev.map(t => 
+      t.id === templateId 
+        ? { ...t, isFavorite: !t.isFavorite }
+        : t
+    ));
+  };
+
+  const handleCopyTemplate = async (template: Template) => {
+    try {
+      await navigator.clipboard.writeText(template.content);
+      notificationService.showNotification({
+        title: 'Template Copied',
+        body: `"${template.title}" copied to clipboard`,
+        priority: 'normal',
+        sound: false
+      });
+    } catch (error) {
+      console.error('Failed to copy template:', error);
+      notificationService.showNotification({
+        title: 'Copy Failed',
+        body: 'Failed to copy template to clipboard',
+        priority: 'high',
+        sound: false
+      });
+    }
+  };
+
+  const handleUseTemplate = async (template: Template) => {
+    // Check if there's an active chat
+    if (!activeTicketId && !isModal) {
+      notificationService.showNotification({
+        title: 'No Active Chat',
+        body: 'Please open a chat first to use templates',
+        priority: 'high',
+        sound: false
+      });
+      return;
+    }
+
+    // Update usage count locally for immediate UI feedback
     setTemplates(prev => prev.map(t => 
       t.id === template.id 
         ? { ...t, usageCount: t.usageCount + 1, lastUsed: new Date() }
         : t
     ));
+
+    // Track usage in database (don't block UI on this)
+    if (!template.id.startsWith('fallback-')) {
+      try {
+        await apiService.updateTemplateUsage(template.id);
+        console.log(`✅ Template usage tracked for: ${template.title}`);
+      } catch (error) {
+        console.warn('⚠️ Failed to track template usage:', error);
+        // Don't show error to user, this is non-critical
+      }
+    }
 
     if (onTemplateSelect) {
       onTemplateSelect(template);
@@ -204,6 +287,14 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
     if (isModal && onClose) {
       onClose();
     }
+
+    // Show success notification
+    notificationService.showNotification({
+      title: 'Template Inserted',
+      body: `"${template.title}" has been inserted into the chat`,
+      priority: 'normal',
+      sound: false
+    });
   };
 
   const handlePreviewAndCustomize = (template: Template) => {
@@ -220,14 +311,19 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
   const categories = ['all', 'greetings', 'technical', 'billing', 'closing', 'escalation', 'general'];
 
   return (
-    <div className={`${isModal ? 'bg-white rounded-lg shadow-xl' : 'bg-gray-50'} h-full flex flex-col`}>
+    <div className={`${isModal ? 'bg-white dark:bg-gray-800 rounded-lg shadow-xl' : 'bg-gray-50 dark:bg-gray-900'} h-full flex flex-col`}>
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Template Library</h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Template Library</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               {filteredTemplates.length} templates available
+              {activeTicketId && (
+                <span className="ml-2 px-2 py-1 bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300 text-xs rounded-full">
+                  Active Chat: {activeTicketId.slice(-6)}
+                </span>
+              )}
             </p>
           </div>
           <div className="flex items-center space-x-3">
@@ -237,10 +333,70 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
             >
               Create Template
             </button>
+            
+            {/* Temporary seed button - remove after use */}
+            <button
+              onClick={async () => {
+                try {
+                  console.log('🌱 Seeding templates...');
+                  const response = await apiService.post('/agent/templates/seed');
+                  console.log('✅ Seed response:', response.data);
+                  
+                  if (response.data.success) {
+                    notificationService.showNotification({
+                      title: 'Templates Seeded',
+                      body: response.data.message,
+                      priority: 'normal',
+                      sound: false
+                    });
+                    
+                    // Refresh templates
+                    const fetchResponse = await apiService.getTemplates();
+                    if (fetchResponse.success && fetchResponse.data.templates) {
+                      const dbTemplates = fetchResponse.data.templates.map((template: any) => ({
+                        id: template._id,
+                        title: template.title,
+                        content: template.content,
+                        category: template.category.toLowerCase(),
+                        tags: template.tags || [],
+                        isPersonal: !template.isShared,
+                        usageCount: template.usageCount || 0,
+                        lastUsed: template.lastUsedAt ? new Date(template.lastUsedAt) : undefined,
+                        createdBy: template.isShared ? 'System' : 'Personal',
+                        createdAt: new Date(template.createdAt),
+                        shortcut: template.shortcut,
+                        isFavorite: false
+                      }));
+                      setTemplates(dbTemplates);
+                      setFilteredTemplates(dbTemplates);
+                    }
+                  } else {
+                    notificationService.showNotification({
+                      title: 'Templates Already Exist',
+                      body: response.data.message,
+                      priority: 'normal',
+                      sound: false
+                    });
+                  }
+                } catch (error: any) {
+                  console.error('❌ Seed error:', error);
+                  notificationService.showNotification({
+                    title: 'Seed Failed',
+                    body: error.response?.data?.message || 'Failed to seed templates',
+                    priority: 'urgent',
+                    sound: false
+                  });
+                }
+              }}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+            >
+              🌱 Seed Templates
+            </button>
+            
             {isModal && onClose && (
               <button
                 onClick={onClose}
-                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -252,7 +408,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <TemplateSearch
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -261,17 +417,19 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
           categories={categories}
           showPersonalOnly={showPersonalOnly}
           onPersonalToggle={setShowPersonalOnly}
+          showFavoritesOnly={showFavoritesOnly}
+          onFavoritesToggle={setShowFavoritesOnly}
         />
       </div>
 
       {/* Templates Grid */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-gray-900">
         {filteredTemplates.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-gray-400 text-6xl mb-4">📝</div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No templates found</h3>
-            <p className="text-gray-500 mb-4">
-              {searchQuery || selectedCategory !== 'all' || showPersonalOnly
+            <div className="text-gray-400 dark:text-gray-600 text-6xl mb-4">📝</div>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No templates found</h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-4">
+              {searchQuery || selectedCategory !== 'all' || showPersonalOnly || showFavoritesOnly
                 ? 'Try adjusting your search or filters'
                 : 'Create your first template to get started'
               }
@@ -292,6 +450,9 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
                 onUse={() => handlePreviewAndCustomize(template)}
                 onEdit={() => handleEditTemplate(template)}
                 onDelete={() => handleDeleteTemplate(template.id)}
+                onToggleFavorite={() => handleToggleFavorite(template.id)}
+                onCopy={() => handleCopyTemplate(template)}
+                hasActiveChat={!!activeTicketId}
               />
             ))}
           </div>

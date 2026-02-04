@@ -86,8 +86,9 @@ export function registerHandoffHandlers(io: any, socket: any) {
         agentStatus: 'available',
       });
 
-      // Join agents room
+      // Join agents room and agent-specific room
       socket.join('agents');
+      socket.join(`agent:${userId}`);
 
       // Get pending tickets
       const pendingTickets = await HandoffTicket.find({ status: 'waiting' })
@@ -99,7 +100,7 @@ export function registerHandoffHandlers(io: any, socket: any) {
         pendingTickets,
       });
 
-      console.log(`Agent connected: ${userId}`);
+      console.log(`Agent connected: ${userId} - joined rooms: agents, agent:${userId}`);
     } catch (error: any) {
       console.error('Agent connect error:', error);
       socket.emit('error', { message: 'Failed to connect as agent', error: error.message });
@@ -114,7 +115,7 @@ export function registerHandoffHandlers(io: any, socket: any) {
       const { ticketId } = data;
       const agentId = socket.userId;
 
-      // Find and update ticket
+      // Find and update ticket with populated user data
       const ticket = await HandoffTicket.findOneAndUpdate(
         { _id: ticketId, status: 'waiting' },
         {
@@ -123,7 +124,7 @@ export function registerHandoffHandlers(io: any, socket: any) {
           assignedAt: new Date(),
         },
         { new: true }
-      );
+      ).populate('userId', 'firstName lastName email');
 
       if (!ticket) {
         socket.emit('error', { message: 'Ticket not available or already assigned' });
@@ -135,7 +136,7 @@ export function registerHandoffHandlers(io: any, socket: any) {
         agentStatus: 'busy',
       });
 
-      // Join ticket room
+      // Join ticket room immediately
       socket.join(`ticket:${ticketId}`);
 
       // Notify user that agent joined
@@ -144,8 +145,16 @@ export function registerHandoffHandlers(io: any, socket: any) {
         agentId,
         message: 'A support agent has joined the conversation',
       });
+      
+      // Also notify via ticket room
+      io.to(`ticket:${ticketId}`).emit('agent:joined', {
+        ticketId: ticket._id,
+        agentId,
+        message: 'A support agent has joined the conversation',
+      });
 
       // Confirm to agent
+      console.log('🎯 DEBUG: Sending ticket:accepted event with data:', { ticket });
       socket.emit('ticket:accepted', {
         ticket,
       });
@@ -158,49 +167,156 @@ export function registerHandoffHandlers(io: any, socket: any) {
   });
 
   /**
-   * Agent sends message to user
+   * Agent joins a specific ticket room for real-time communication
    */
-  socket.on('agent:message', async (data: { ticketId: string; content: string }) => {
+  socket.on('agent:join_ticket', async (data: { ticketId: string }) => {
     try {
-      const { ticketId, content } = data;
+      const { ticketId } = data;
       const agentId = socket.userId;
 
-      // Get ticket
+      // Verify agent is assigned to this ticket
       const ticket = await HandoffTicket.findById(ticketId);
       if (!ticket || ticket.assignedAgentId?.toString() !== agentId) {
         socket.emit('error', { message: 'Unauthorized or ticket not found' });
         return;
       }
 
-      // Add message to conversation
+      // Join ticket room
+      socket.join(`ticket:${ticketId}`);
+      console.log(`Agent ${agentId} joined ticket room: ${ticketId}`);
+
+      // Notify customer that agent is active
+      io.to(`user:${ticket.userId}`).emit('agent:active', {
+        ticketId,
+        message: 'Agent is now active in this conversation'
+      });
+
+    } catch (error: any) {
+      console.error('Agent join ticket error:', error);
+      socket.emit('error', { message: 'Failed to join ticket', error: error.message });
+    }
+  });
+
+  /**
+   * Agent leaves a ticket room
+   */
+  socket.on('agent:leave_ticket', async (data: { ticketId: string }) => {
+    try {
+      const { ticketId } = data;
+      const agentId = socket.userId;
+
+      // Leave ticket room
+      socket.leave(`ticket:${ticketId}`);
+      console.log(`Agent ${agentId} left ticket room: ${ticketId}`);
+
+    } catch (error: any) {
+      console.error('Agent leave ticket error:', error);
+    }
+  });
+
+  /**
+   * Agent sends message to customer (updated event name)
+   */
+  socket.on('agent:message', async (data: { ticketId: string; message: string; timestamp?: Date }) => {
+    try {
+      const { ticketId, message, timestamp } = data;
+      const agentId = socket.userId;
+
+      console.log(`🔍 AGENT MESSAGE DEBUG: Agent ${agentId} sending message to ticket ${ticketId}`);
+      console.log(`🔍 AGENT MESSAGE DEBUG: Message content: "${message}"`);
+
+      // Get ticket and verify agent assignment
+      const ticket = await HandoffTicket.findById(ticketId);
+      if (!ticket || ticket.assignedAgentId?.toString() !== agentId) {
+        console.log(`❌ AGENT MESSAGE DEBUG: Unauthorized - ticket found: ${!!ticket}, assigned agent: ${ticket?.assignedAgentId}, current agent: ${agentId}`);
+        socket.emit('error', { message: 'Unauthorized or ticket not found' });
+        return;
+      }
+
+      const messageTimestamp = timestamp || new Date();
+
+      // CRITICAL FIX: Save message to HandoffTicket conversationContext
+      const agentMessage = {
+        role: 'agent' as const,
+        content: message,
+        timestamp: messageTimestamp,
+        agentId,
+      };
+
+      console.log(`💾 AGENT MESSAGE DEBUG: Saving agent message to database:`, agentMessage);
+
+      // Add to HandoffTicket conversationContext (this is what gets loaded by history API)
+      const updateResult = await HandoffTicket.findByIdAndUpdate(ticketId, {
+        $push: {
+          conversationContext: agentMessage
+        }
+      }, { new: true });
+
+      console.log(`💾 AGENT MESSAGE DEBUG: Database update result - success: ${!!updateResult}`);
+      console.log(`💾 AGENT MESSAGE DEBUG: Updated conversationContext length: ${updateResult?.conversationContext?.length || 0}`);
+
+      // Also save to Conversation for completeness
       const conversation = await Conversation.findById(ticket.conversationId);
       if (conversation) {
-        const agentMessage = {
+        const conversationMessage = {
           _id: new Types.ObjectId().toString(),
           role: 'agent' as const,
-          content,
-          timestamp: new Date(),
+          content: message,
+          timestamp: messageTimestamp,
           agentId,
         };
 
-        conversation.messages.push(agentMessage as any);
+        conversation.messages.push(conversationMessage as any);
         await conversation.save();
-
-        // Send to user
-        io.to(`user:${ticket.userId}`).emit('agent:message', {
-          ticketId,
-          message: agentMessage,
-        });
-
-        // Confirm to agent
-        socket.emit('message:sent', {
-          ticketId,
-          message: agentMessage,
-        });
+        console.log(`💾 AGENT MESSAGE DEBUG: Also saved to Conversation model`);
       }
+
+      // Send to customer via ticket room, but exclude the sending agent
+      socket.to(`ticket:${ticketId}`).emit('chat:response', {
+        message: message,
+        sender: 'agent',
+        timestamp: messageTimestamp,
+        ticketId: ticketId
+      });
+
+      // Confirm to agent (only success confirmation, not the message content)
+      socket.emit('chat:response', {
+        message: 'Message sent successfully',
+        timestamp: messageTimestamp,
+        ticketId: ticketId,
+        success: true
+      });
+
+      console.log(`✅ AGENT MESSAGE DEBUG: Agent ${agentId} sent message to ticket ${ticketId} - SAVED TO DATABASE`);
     } catch (error: any) {
-      console.error('Agent message error:', error);
+      console.error('❌ AGENT MESSAGE DEBUG: Agent message error:', error);
       socket.emit('error', { message: 'Failed to send message', error: error.message });
+    }
+  });
+
+  /**
+   * Agent typing indicator
+   */
+  socket.on('agent:typing', async (data: { ticketId: string; isTyping: boolean }) => {
+    try {
+      const { ticketId, isTyping } = data;
+      const agentId = socket.userId;
+
+      // Get ticket and verify agent assignment
+      const ticket = await HandoffTicket.findById(ticketId);
+      if (!ticket || ticket.assignedAgentId?.toString() !== agentId) {
+        return; // Silently ignore unauthorized typing indicators
+      }
+
+      // Send typing indicator to customer
+      io.to(`user:${ticket.userId}`).emit('chat:typing', {
+        isTyping,
+        sender: 'agent',
+        ticketId
+      });
+
+    } catch (error: any) {
+      console.error('Agent typing error:', error);
     }
   });
 

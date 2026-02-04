@@ -28,6 +28,7 @@ export interface InAppNotification {
   read: boolean;
   actions?: NotificationAction[];
   autoClose?: number; // milliseconds
+  data?: any; // Additional data for callbacks
 }
 
 export interface NotificationSettings {
@@ -511,6 +512,33 @@ class NotificationService {
       tag: `ticket-${ticketData.id}`,
       data: { ticketId: ticketData.id, type }
     });
+  }
+
+  /**
+   * Show actionable in-app notification (for toasts with action buttons)
+   */
+  showActionableNotification(notification: Omit<InAppNotification, 'id' | 'timestamp' | 'read'>): void {
+    const actionableNotification: InAppNotification = {
+      id: `actionable-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+      timestamp: new Date(),
+      read: false,
+      ...notification
+    };
+
+    this.inAppNotifications.unshift(actionableNotification);
+    
+    // Limit to 50 notifications
+    if (this.inAppNotifications.length > 50) {
+      this.inAppNotifications = this.inAppNotifications.slice(0, 50);
+    }
+
+    // Notify callbacks (this will trigger toast display)
+    this.notificationCallbacks.forEach(callback => callback(actionableNotification));
+    
+    // Play sound if enabled
+    if (this.settings.soundAlerts) {
+      this.playNotificationSound(notification.priority);
+    }
   }
 
   /**

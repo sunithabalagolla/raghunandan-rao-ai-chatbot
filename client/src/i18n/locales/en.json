@@ -1,30 +1,30 @@
 {
   "chatbot": {
     "header": {
-      "title": "PPC Assistant",
+      "title": "MRR Assistant",
       "subtitle": "How can I help?",
       "back": "Back to menu"
     },
     "welcome": {
-      "greeting": "Hi! I'm your PPC Assistant",
-      "description": "I can help with RTI applications, complaints, and more."
+      "greeting": "Namaste! I'm MRR Constituency Assistant",
+      "description": "I can help you report issues to MP Madhavaneni Raghunandan Rao's office."
     },
-    "initialMessage": "Hello! Welcome to Public Participation Center. I'm your PPC Civic Assistant. I can help with RTI applications, complaints, legal aid, emergency assistance, healthcare services, and finding nearest PPC centers.",
+    "initialMessage": "Namaste! I'm here to help you report issues to MP Madhavaneni Raghunandan Rao's office. Common issues I can help with:\n\n🚰 Water problems\n🌾 Agriculture & irrigation\n⚡ Electricity issues\n🏥 Healthcare\n💼 Employment\n🏠 Housing & welfare\n🚌 Transport\n\nHow can I help you today?",
     "actions": {
-      "track": "Track Status",
-      "report": "Report Issue",
-      "find": "Find Center",
-      "emergency": "Emergency Help"
+      "water": "🚰 Drinking Water",
+      "irrigation": "🌾 Irrigation Water",
+      "electricity": "⚡ Electricity",
+      "healthcare": "🏥 Healthcare"
     },
     "prompts": {
-      "track": "I want to track my application status",
-      "report": "I need to file a report or complaint",
-      "find": "Help me find the nearest service center",
-      "emergency": "I need emergency assistance"
+      "water": "I have a drinking water problem in my village",
+      "irrigation": "My crops need irrigation water",
+      "electricity": "We have frequent power cuts",
+      "healthcare": "No doctors in our hospital"
     },
     "footer": {
       "help": "Help",
-      "services": "All Services"
+      "services": "All Issues"
     },
     "input": {
       "placeholder": "Type your message...",
@@ -33,6 +33,79 @@
     "rateLimit": {
       "message": "Please wait before sending more messages",
       "wait": "Please wait {{seconds}} seconds before sending more messages."
+    },
+    "services": {
+      "title": "All Constituency Issues",
+      "water": {
+        "title": "Drinking Water",
+        "description": "Water supply issues, bore wells, pipeline problems",
+        "prompt": "I have a drinking water problem"
+      },
+      "irrigation": {
+        "title": "Irrigation",
+        "description": "Canal maintenance, water allocation, pump sets",
+        "prompt": "I have an irrigation issue"
+      },
+      "crop-loss": {
+        "title": "Crop Loss",
+        "description": "Compensation claims, insurance, weather damage",
+        "prompt": "I need help with crop loss compensation"
+      },
+      "road-repair": {
+        "title": "Road Repair",
+        "description": "Pothole complaints, road construction, connectivity",
+        "prompt": "I need to report a road repair issue"
+      },
+      "electricity": {
+        "title": "Electricity",
+        "description": "Power cuts, transformer issues, new connections",
+        "prompt": "I have an electricity problem"
+      },
+      "healthcare": {
+        "title": "Healthcare",
+        "description": "PHC services, ambulance requests, medical camps",
+        "prompt": "I have a healthcare facility issue"
+      },
+      "employment": {
+        "title": "Employment",
+        "description": "Job opportunities, skill training, MGNREGA work",
+        "prompt": "I need help with employment opportunities"
+      },
+      "pension": {
+        "title": "Pension",
+        "description": "Old age pension, widow pension, disability pension",
+        "prompt": "I have a pension related issue"
+      },
+      "housing": {
+        "title": "Housing",
+        "description": "Housing schemes, construction permits, Indiramma houses",
+        "prompt": "I have a housing scheme issue"
+      },
+      "land-dharani": {
+        "title": "Land/Dharani",
+        "description": "Land records, title disputes, land registration",
+        "prompt": "I have a land records issue"
+      },
+      "transport": {
+        "title": "Transport",
+        "description": "Bus services, auto permits, transport connectivity",
+        "prompt": "I have a transport connectivity issue"
+      },
+      "drainage": {
+        "title": "Drainage",
+        "description": "Sewage problems, flood management, water logging",
+        "prompt": "I have a drainage problem"
+      },
+      "education": {
+        "title": "Education",
+        "description": "School infrastructure, scholarships, teacher appointments",
+        "prompt": "I have an education related issue"
+      },
+      "stray-cattle": {
+        "title": "Stray Cattle",
+        "description": "Cattle menace, goshalas, cattle insurance",
+        "prompt": "I have a stray cattle problem"
+      }
     }
   }
 }

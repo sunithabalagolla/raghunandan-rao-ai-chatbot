@@ -22,15 +22,15 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onAccept }) => {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'emergency':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800';
       case 'high':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
+        return 'bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-800';
       case 'medium':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800';
       case 'low':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-600';
     }
   };
 
@@ -72,21 +72,21 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onAccept }) => {
   };
 
   const getWaitTimeColor = (minutes: number) => {
-    if (minutes > 30) return 'text-red-600';
-    if (minutes > 15) return 'text-orange-600';
-    return 'text-green-600';
+    if (minutes > 30) return 'text-red-600 dark:text-red-400';
+    if (minutes > 15) return 'text-orange-600 dark:text-orange-400';
+    return 'text-green-600 dark:text-green-400';
   };
 
   return (
-    <div className={`bg-white rounded-lg border-2 p-6 hover:shadow-lg transition-all duration-200 ${
-      ticket.priority === 'emergency' ? 'border-red-300 shadow-red-100' : 'border-gray-200'
+    <div className={`bg-white dark:bg-gray-800 rounded-lg border-2 p-6 hover:shadow-lg transition-all duration-200 ${
+      ticket.priority === 'emergency' ? 'border-red-300 dark:border-red-700 shadow-red-100 dark:shadow-red-900/20' : 'border-gray-200 dark:border-gray-700'
     }`}>
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center space-x-3 mb-3">
             <div className="flex items-center space-x-2">
               <span className="text-lg">{getDepartmentIcon(ticket.department)}</span>
-              <h3 className="text-lg font-semibold text-gray-900">{ticket.subject}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{ticket.subject}</h3>
             </div>
             <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(ticket.priority)}`}>
               {ticket.priority.toUpperCase()}
@@ -95,15 +95,15 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onAccept }) => {
 
           <div className="flex items-center space-x-4 mb-3">
             <div className="flex items-center space-x-1">
-              <span className="text-sm text-gray-500">Customer:</span>
-              <span className="text-sm font-medium text-gray-900">{ticket.customerName}</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">Customer:</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">{ticket.customerName}</span>
             </div>
             <div className="flex items-center space-x-1">
               <span className="text-lg">{getLanguageFlag(ticket.language)}</span>
-              <span className="text-sm text-gray-500">{ticket.language.toUpperCase()}</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{ticket.language.toUpperCase()}</span>
             </div>
             <div className="flex items-center space-x-1">
-              <span className="text-sm text-gray-500">Wait:</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">Wait:</span>
               <span className={`text-sm font-medium ${getWaitTimeColor(ticket.waitTime)}`}>
                 {formatWaitTime(ticket.waitTime)}
               </span>
@@ -111,11 +111,11 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onAccept }) => {
           </div>
 
           <div className="mb-4">
-            <p className="text-sm text-gray-600 line-clamp-2">{ticket.lastMessage}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">{ticket.lastMessage}</p>
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-gray-400 dark:text-gray-500">
               {ticket.timestamp.toLocaleTimeString()}
             </span>
             <button
@@ -133,8 +133,8 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onAccept }) => {
 
         {ticket.priority === 'emergency' && (
           <div className="ml-4">
-            <div className="bg-red-100 p-2 rounded-full">
-              <span className="text-red-600 text-xl animate-pulse">🚨</span>
+            <div className="bg-red-100 dark:bg-red-900/20 p-2 rounded-full">
+              <span className="text-red-600 dark:text-red-400 text-xl animate-pulse">🚨</span>
             </div>
           </div>
         )}

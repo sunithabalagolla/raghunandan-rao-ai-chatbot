@@ -96,6 +96,48 @@ class ApiService {
     return response.data;
   }
 
+  // Template endpoints
+  async getTemplates(): Promise<any> {
+    const response = await this.api.get('/agent/templates');
+    return response.data;
+  }
+
+  async createTemplate(templateData: any): Promise<any> {
+    const response = await this.api.post('/agent/templates', templateData);
+    return response.data;
+  }
+
+  async updateTemplate(templateId: string, templateData: any): Promise<any> {
+    const response = await this.api.put(`/agent/templates/${templateId}`, templateData);
+    return response.data;
+  }
+
+  async deleteTemplate(templateId: string): Promise<any> {
+    const response = await this.api.delete(`/agent/templates/${templateId}`);
+    return response.data;
+  }
+
+  async updateTemplateUsage(templateId: string): Promise<any> {
+    const response = await this.api.post(`/agent/templates/${templateId}/usage`);
+    return response.data;
+  }
+
+  // Settings endpoints
+  async getSettings(): Promise<any> {
+    const response = await this.api.get('/agent/settings');
+    return response.data;
+  }
+
+  async updateSettings(settingsData: any): Promise<any> {
+    const response = await this.api.put('/agent/settings', settingsData);
+    return response.data;
+  }
+
+  async changePassword(passwordData: { currentPassword: string; newPassword: string }): Promise<any> {
+    const response = await this.api.post('/agent/change-password', passwordData);
+    return response.data;
+  }
+
   // Utility methods
   setAuthToken(token: string): void {
     localStorage.setItem('authToken', token);

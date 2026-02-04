@@ -117,6 +117,22 @@ const UserSchema = new Schema<IUserDocument>(
           type: Boolean,
           default: true,
         },
+        soundVolume: {
+          type: Number,
+          default: 70,
+          min: 0,
+          max: 100,
+        },
+        autoRefreshInterval: {
+          type: String,
+          enum: ['30s', '1m', '2m', '5m'],
+          default: '1m',
+        },
+        theme: {
+          type: String,
+          enum: ['light', 'dark'],
+          default: 'light',
+        },
       },
     },
 

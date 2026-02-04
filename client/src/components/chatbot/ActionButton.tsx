@@ -22,17 +22,17 @@ export const ActionButton = ({
 }: ActionButtonProps) => {
   const { i18n } = useTranslation();
   
-  // Optimized sizing for Telugu and Hindi
+  // Fixed sizing for consistent button dimensions
   const isTelugu = i18n.language === 'te';
   const isHindi = i18n.language === 'hi';
-  const buttonHeight = isTelugu ? '52px' : isHindi ? '50px' : '48px';
-  const verticalPadding = isTelugu ? '10px' : isHindi ? '10px' : '12px';
-  const horizontalPadding = isTelugu ? '14px' : isHindi ? '14px' : '16px';
-  const lineHeight = isTelugu ? '1.4' : isHindi ? '1.45' : '1.5';
-  const fontSize = isTelugu ? '14px' : isHindi ? '14px' : '14px';
-  const iconSize = isTelugu ? 16 : isHindi ? 16 : 18;
+  const buttonHeight = '56px'; // Fixed height for all buttons
+  const verticalPadding = '12px';
+  const horizontalPadding = isTelugu ? '12px' : isHindi ? '12px' : '14px';
+  const lineHeight = isTelugu ? '1.3' : isHindi ? '1.35' : '1.4';
+  const fontSize = isTelugu ? '13px' : isHindi ? '13px' : '13px';
+  const iconSize = 16; // Fixed icon size
   const fontWeight = isTelugu ? '700' : isHindi ? '700' : '600';
-  const iconGap = isTelugu ? '10px' : isHindi ? '10px' : '8px';
+  const iconGap = '8px'; // Fixed gap
   
   return (
     <button
@@ -42,7 +42,8 @@ export const ActionButton = ({
         alignItems: 'center',
         justifyContent: 'center',
         gap: iconGap,
-        minHeight: buttonHeight,
+        height: buttonHeight, // Fixed height instead of minHeight
+        width: '100%', // Ensure full width
         backgroundColor: bgColor,
         color: color,
         border: `2px solid ${borderColor}`,
@@ -56,7 +57,8 @@ export const ActionButton = ({
         animation: `fadeIn 500ms ease-out ${index * 100}ms backwards`,
         lineHeight: lineHeight,
         whiteSpace: 'normal',
-        textAlign: 'center'
+        textAlign: 'center',
+        boxSizing: 'border-box' // Ensure padding is included in dimensions
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-2px)';

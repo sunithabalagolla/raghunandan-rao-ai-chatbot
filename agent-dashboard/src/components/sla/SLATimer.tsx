@@ -11,7 +11,7 @@ interface SLAInfo {
 }
 
 interface SLATimerProps {
-  slaInfo: SLAInfo;
+  slaInfo: SLAInfo | null | undefined;
   priority: string;
   ticketId: string;
   onEscalationNeeded?: (ticketId: string, reason: string) => void;
@@ -25,6 +25,11 @@ export const SLATimer: React.FC<SLATimerProps> = ({
   onEscalationNeeded,
   compact = false
 }) => {
+  // Add null safety check at the very start
+  if (!slaInfo) {
+    return null;
+  }
+
   const [_currentTime, setCurrentTime] = useState(Date.now());
 
   // Update timer every second
@@ -39,12 +44,14 @@ export const SLATimer: React.FC<SLATimerProps> = ({
   // Check for escalation needs and SLA alerts
   useEffect(() => {
     // Check SLA status and create alerts
-    slaService.checkSLAStatus(ticketId, slaInfo, priority);
+    if (slaInfo) {
+      slaService.checkSLAStatus(ticketId, slaInfo, priority);
 
-    if (slaInfo.isResponseOverdue && onEscalationNeeded) {
-      onEscalationNeeded(ticketId, 'Response SLA exceeded');
+      if (slaInfo.isResponseOverdue && onEscalationNeeded) {
+        onEscalationNeeded(ticketId, 'Response SLA exceeded');
+      }
     }
-  }, [slaInfo.isResponseOverdue, ticketId, onEscalationNeeded, slaInfo, priority]);
+  }, [slaInfo?.isResponseOverdue, ticketId, onEscalationNeeded, slaInfo, priority]);
 
   const formatTimeRemaining = (milliseconds: number): string => {
     if (milliseconds <= 0) return '0m';
@@ -75,6 +82,15 @@ export const SLATimer: React.FC<SLATimerProps> = ({
   };
 
   const getSLAStatus = () => {
+    if (!slaInfo) {
+      return {
+        status: 'unknown',
+        color: 'bg-gray-100 text-gray-800 border-gray-200',
+        icon: '⏱️',
+        label: 'LOADING'
+      };
+    }
+
     const responseTime = slaInfo.responseTimeRemaining;
     const target = getSLATarget(priority) * 60000; // Convert to milliseconds
     const warningThreshold = target * 0.25; // 25% of target time

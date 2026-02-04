@@ -6,14 +6,16 @@ export const NotificationToast: React.FC = () => {
 
   useEffect(() => {
     const handleNewNotification = (notification: InAppNotification) => {
-      // Only show toast for notifications with autoClose
-      if (notification.autoClose && notification.autoClose > 0) {
+      // Show toast for notifications with autoClose OR actionable notifications (autoClose = 0)
+      if ((notification.autoClose && notification.autoClose > 0) || notification.autoClose === 0) {
         setToasts(prev => [...prev, notification]);
 
-        // Auto-remove after specified time
-        setTimeout(() => {
-          setToasts(prev => prev.filter(t => t.id !== notification.id));
-        }, notification.autoClose);
+        // Auto-remove after specified time (only if autoClose > 0)
+        if (notification.autoClose && notification.autoClose > 0) {
+          setTimeout(() => {
+            setToasts(prev => prev.filter(t => t.id !== notification.id));
+          }, notification.autoClose);
+        }
       }
     };
 
@@ -110,7 +112,19 @@ export const NotificationToast: React.FC = () => {
                   {toast.actions.map((action, index) => (
                     <button
                       key={index}
-                      className="px-3 py-1 text-xs bg-white bg-opacity-20 hover:bg-opacity-30 rounded transition-colors"
+                      onClick={() => {
+                        // Handle action callback from notification data
+                        const notificationData = notificationService.getInAppNotifications()
+                          .find(n => n.id === toast.id);
+                        
+                        if (notificationData?.data?.onAction) {
+                          notificationData.data.onAction(action.action);
+                        }
+                        
+                        // Remove toast after action
+                        removeToast(toast.id);
+                      }}
+                      className="px-3 py-1 text-xs bg-white bg-opacity-20 hover:bg-opacity-30 rounded transition-colors font-medium"
                     >
                       {action.title}
                     </button>

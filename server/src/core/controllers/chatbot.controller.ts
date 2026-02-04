@@ -72,6 +72,7 @@ const createHandoffTicket = async (
     // Create handoff ticket
     const ticket = await HandoffTicket.create({
       userId: user._id,
+      sessionUserId: userId, // Store the original session userId for message routing
       conversationId: conversation._id,
       reason: `User requested human assistance: ${message}`,
       priority: 2,
@@ -98,6 +99,7 @@ const createHandoffTicket = async (
     });
 
     console.log('✅ Handoff ticket created:', ticket._id);
+    console.log('🔍 Ticket created with sessionUserId:', userId, 'and userId:', user._id);
     return ticket._id.toString();
   } catch (error) {
     console.error('❌ Error creating handoff ticket:', error);

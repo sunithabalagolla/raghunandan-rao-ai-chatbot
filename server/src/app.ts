@@ -10,6 +10,7 @@ console.log('🚨🚨🚨 SUPERVISOR ROUTES IMPORTED:', typeof supervisorRoutes)
 import emergencyRoutes from './routes/emergency.routes';
 import conversationRoutes from './routes/conversation.routes';
 import handoffRoutes from './routes/handoff.routes';
+import locationRoutes from './routes/location.routes';
 import chatbotRoutes from './core/routes/chatbot.routes';
 import { rateLimitMiddleware } from './middleware/rateLimit.middleware';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.middleware';
@@ -227,6 +228,7 @@ const createApp = (): Application => {
   console.log('✅ Supervisor routes mounted at /api/supervisor');
   app.use('/api/conversations', conversationRoutes);
   app.use('/api/handoff', handoffRoutes);
+  app.use('/api/locations', locationRoutes); // Location routes for constituency data
   app.use('/api/chatbot', chatbotRoutes); // AI Chatbot routes
 
   // ============================================
